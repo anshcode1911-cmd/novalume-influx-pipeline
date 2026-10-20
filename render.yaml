@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: novalume-influx-pipeline
+    runtime: docker
+    plan: free
+    region: oregon
+    healthCheckPath: /healthz
+    envVars:
+      - key: INFLUX_TOKEN
+        sync: false
+      - key: MQTT_BROKER_URL
+        value: tcp://broker.hivemq.com:1883
+      - key: SESSION_SECRET_KEY
+        generateValue: true

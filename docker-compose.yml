@@ -1,0 +1,48 @@
+services:
+  novalume-mqtt:
+    image: eclipse-mosquitto:latest
+    container_name: novalume-mqtt
+    ports:
+      - "1883:1883"
+    restart: unless-stopped
+
+  influxdb3-core:
+    image: influxdb:3-core
+    container_name: novalume-influxdb3
+    ports:
+      - "8181:8181"
+    volumes:
+      - ./data:/var/lib/influxdb3/data
+    command:
+      - influxdb3
+      - serve
+      - --node-id=novalume-node
+      - --object-store=file
+      - --data-dir=/var/lib/influxdb3/data
+    restart: unless-stopped
+
+  influxdb3-explorer:
+    image: influxdata/influxdb3-ui:1.11.0
+    container_name: novalume-influx3-ui
+    ports:
+      - "8888:8080"
+    volumes:
+      - ./config:/app-root/config:ro
+    environment:
+      - SESSION_SECRET_KEY=novalume_demo_secret_key_32_chars
+    command: --mode=admin
+    depends_on:
+      - influxdb3-core
+    restart: unless-stopped
+
+  telegraf:
+    image: telegraf:1.36
+    container_name: novalume-telegraf3
+    environment:
+      - INFLUX_TOKEN=${INFLUX_TOKEN} # <--- This safely pulls from .env
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    depends_on:
+      - influxdb3-core
+      - novalume-mqtt
+    restart: unless-stopped
