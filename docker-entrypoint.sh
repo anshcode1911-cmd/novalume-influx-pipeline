@@ -17,23 +17,25 @@ chown -R influxdb3:influxdb3 /var/lib/influxdb3 /etc/influxdb3
 # 3. Setup Admin Token
 if [ -n "$INFLUX_TOKEN" ]; then
     echo ">> [Auth] Configuring admin token from environment..."
-    cat <<EOF > /etc/influxdb3/admin_token.json
-{
-  "token": "$INFLUX_TOKEN",
-  "name": "_admin"
-}
-EOF
+    INFLUX_TOKEN=$(echo "$INFLUX_TOKEN" | tr -d '\r\n[:space:]')
+    export INFLUX_TOKEN
+    printf '{\n  "token": "%s",\n  "name": "_admin"\n}\n' "$INFLUX_TOKEN" > /etc/influxdb3/admin_token.json
+    chmod 600 /etc/influxdb3/admin_token.json
+    chown influxdb3:influxdb3 /etc/influxdb3/admin_token.json
     export INFLUXDB3_ADMIN_TOKEN_FILE=/etc/influxdb3/admin_token.json
 else
     echo ">> [Auth] No INFLUX_TOKEN provided. Generating persistent offline token..."
     if [ ! -f /etc/influxdb3/admin_token.json ]; then
         influxdb3 create token --admin --offline --output-file /etc/influxdb3/admin_token.json
     fi
+    chmod 600 /etc/influxdb3/admin_token.json
+    chown influxdb3:influxdb3 /etc/influxdb3/admin_token.json
     export INFLUXDB3_ADMIN_TOKEN_FILE=/etc/influxdb3/admin_token.json
-    INFLUX_TOKEN=$(grep -o '"token": *"[^"]*"' /etc/influxdb3/admin_token.json | cut -d'"' -f4)
+    INFLUX_TOKEN=$(grep -o '"token": *"[^"]*"' /etc/influxdb3/admin_token.json | cut -d'"' -f4 | tr -d '\r\n[:space:]')
     export INFLUX_TOKEN
     echo ">> [Auth] Generated Admin Token: $INFLUX_TOKEN"
 fi
+
 
 # 4. Start local Mosquitto MQTT broker if installed
 if command -v mosquitto >/dev/null 2>&1; then
